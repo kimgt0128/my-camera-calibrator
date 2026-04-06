@@ -10,13 +10,34 @@
 
 ---
 
-## 2. 주요 기능 (Key Features)
+## 2. 프로젝트 구조 (Directory Structure)
+
+```
+week4/
+├── camera_calibration.py      # Step 1: 카메라 캘리브레이션
+├── distortion_correction.py   # Step 2: 렌즈 왜곡 보정
+├── README.md
+│
+├── videos/                    # 핸드폰으로 촬영한 동영상 입력 폴더
+│   ├── angle1.mp4             # 각도별로 여러 개 넣기
+│   └── angle2.mp4
+│
+├── calib_images/              # [자동 생성] 동영상에서 추출된 체스보드 프레임
+├── results/                   # [자동 생성] K.npy, dist.npy
+└── screenshots/               # [자동 생성] 보정 전후 스크린샷
+```
+
+> `calib_images/`, `results/`, `screenshots/` 폴더는 프로그램 실행 시 **자동 생성**됩니다.
+
+---
+
+## 3. 주요 기능 (Key Features)
 
 ### camera_calibration.py
-- 웹캠으로 체스보드 패턴을 실시간 촬영하며 코너점 자동 검출
-- `Space` 키로 원하는 순간의 프레임을 캡처하여 캘리브레이션 데이터 수집
-- `Enter` 키로 캘리브레이션 실행 → `K.npy`, `dist.npy` 자동 저장
-- RMS 재투영 오차로 캘리브레이션 품질 자동 평가
+- **동영상 자동 처리**: `videos/` 폴더에 동영상을 넣으면 균등 간격으로 프레임 추출 후 체스보드 검출
+- **세로 영상 자동 회전**: 핸드폰으로 세로 촬영한 영상도 자동으로 가로로 변환하여 처리
+- **3가지 입력 모드 자동 감지**: 동영상 → 이미지 → 웹캠 순으로 자동 선택
+- **캘리브레이션 품질 평가**: RMS 재투영 오차로 자동 평가 및 결과 저장
 
 ### distortion_correction.py
 - `camera_calibration.py`로 구한 K, dist_coeff를 바탕으로 실시간 왜곡 보정
@@ -25,31 +46,40 @@
 
 ---
 
-## 3. 조작 가이드 (Controls)
+## 4. 동영상 촬영 가이드 (How to Record Videos)
 
-### camera_calibration.py
+> 캘리브레이션 품질은 촬영 방법에 크게 좌우됩니다.
 
-| 키 (Key) | 설명 (Function) |
-|----------|----------------|
-| **Space** | 현재 프레임 캡처 (체스보드 검출 시에만) |
-| **Enter** | 캘리브레이션 실행 (최소 10장 이상 필요) |
-| **ESC** | 프로그램 종료 |
+### ✅ 올바른 촬영 방법
 
-### distortion_correction.py
+| 항목 | 내용 |
+|------|------|
+| **체스보드 크기** | 화면의 **50% 이상** 차지하도록 가까이 촬영 |
+| **촬영 각도** | 정면 + 상하좌우 기울임 + 대각선 등 **다양한 각도** |
+| **영상 수** | 각도별로 **여러 개** 나눠서 촬영 (angle1.mp4, angle2.mp4 ...) |
+| **영상 길이** | 동영상 1개당 **10~15초** 이상 |
+| **움직임** | 천천히 부드럽게 이동 — 흔들림 최소화 |
+| **조명** | 밝은 곳에서 촬영, 직사광선 반사 주의 |
+| **방향** | 세로/가로 모두 가능 (자동 회전 처리) |
 
-| 키 (Key) | 설명 (Function) |
-|----------|----------------|
-| **Space** | 보정 ON/OFF 토글 |
-| **s** | 현재 화면 스크린샷 저장 |
-| **ESC** | 프로그램 종료 |
+### ❌ 피해야 할 촬영
+
+- 체스보드가 화면에 작게 찍히는 것
+- 카메라-보드가 완전 평행인 영상만 찍는 것 (원근 정보 부족)
+- 빠르게 움직여 흔들림이 심한 영상
+- 체스보드 전체가 화면에서 잘리는 경우
 
 ---
 
-## 4. 실행 방법 (Setup & Run)
+## 5. 실행 방법 (Setup & Run)
 
 ```bash
 # 필수 라이브러리 설치
 pip install numpy opencv-python
+
+# 1. videos/ 폴더에 동영상 넣기
+mkdir videos
+# 핸드폰으로 촬영한 mp4/mov 파일을 videos/ 에 복사
 
 # Step 1: 카메라 캘리브레이션
 python camera_calibration.py
@@ -58,30 +88,58 @@ python camera_calibration.py
 python distortion_correction.py
 ```
 
+### 입력 모드 자동 선택
+
+| 상황 | 동작 |
+|------|------|
+| `videos/` 에 동영상 있음 | 동영상에서 프레임 자동 추출 후 캘리브레이션 |
+| `calib_images/` 에 이미지 있음 | 이미지 파일 직접 사용 |
+| 둘 다 없음 | 실시간 웹캠 캡처 모드 |
+
 ---
 
-## 5. 캘리브레이션 결과 (Calibration Results)
+## 6. 조작 가이드 (Controls)
 
-<!-- 아래 값을 camera_calibration.py 실행 결과로 채워주세요 -->
+### camera_calibration.py (웹캠 모드일 때)
+
+| 키 | 기능 |
+|----|------|
+| **Space** | 체스보드 검출 성공 시 현재 프레임 캡처 |
+| **Enter** | 캘리브레이션 실행 (최소 10장 이상 후) |
+| **ESC** | 프로그램 종료 |
+
+### distortion_correction.py
+
+| 키 | 기능 |
+|----|------|
+| **Space** | 보정 ON/OFF 토글 (원본 ↔ 보정 비교) |
+| **s** | 현재 화면 스크린샷 저장 |
+| **ESC** | 프로그램 종료 |
+
+---
+
+## 7. 캘리브레이션 결과 (Calibration Results)
+
+<!-- camera_calibration.py 실행 후 터미널 출력값을 아래 표에 붙여넣으세요 -->
 
 | 파라미터 | 값 |
 |---------|-----|
-| **fx** | 000.0000 |
-| **fy** | 000.0000 |
-| **cx** | 000.0000 |
-| **cy** | 000.0000 |
-| **k1** | 0.000000 |
-| **k2** | 0.000000 |
-| **p1** | 0.000000 |
-| **p2** | 0.000000 |
-| **k3** | 0.000000 |
-| **RMS Error** | 0.000000 px |
+| **fx** |  |
+| **fy** |  |
+| **cx** |  |
+| **cy** |  |
+| **k1** |  |
+| **k2** |  |
+| **p1** |  |
+| **p2** |  |
+| **k3** |  |
+| **RMS Error** |  |
 
 ---
 
-## 6. 왜곡 보정 결과 (Distortion Correction Demo)
+## 8. 왜곡 보정 결과 (Distortion Correction Demo)
 
-<!-- 스크린샷 또는 GIF를 여기에 추가하세요 -->
+<!-- distortion_correction.py 실행 후 s키로 저장한 스크린샷을 첨부하세요 -->
 
 ### 보정 전 (Original)
 ![original](screenshots/screenshot_001_original.jpg)

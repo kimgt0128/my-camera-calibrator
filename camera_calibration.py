@@ -108,10 +108,34 @@ def save_results(rms, K, dist):
 
 # ── 방법 A: 동영상에서 프레임 추출 ──────────────────────────────────
 
+def get_rotation_from_exif(video_path):
+    """
+    핸드폰 동영상은 EXIF 회전 정보가 없어서 OpenCV가 그대로 읽음.
+    영상의 가로/세로 비율로 세로 영상 여부를 판단하여
+    필요한 회전 방향을 반환.
+    """
+    cap = cv.VideoCapture(video_path)
+    w = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+    cap.release()
+
+    if h > w:
+        # 세로 영상 (1080x1920 등) → 시계방향 90도 회전
+        return cv.ROTATE_90_CLOCKWISE
+    return None  # 가로 영상 → 회전 불필요
+
+
+def rotate_frame(frame, rotation):
+    """회전 플래그에 따라 프레임 회전"""
+    if rotation is None:
+        return frame
+    return cv.rotate(frame, rotation)
+
+
 def extract_frames_from_video(video_path, n_extract):
     """
     동영상에서 n_extract개의 프레임을 균등하게 추출.
-    전체 프레임을 균등 간격으로 샘플링해서 반환.
+    세로 영상(핸드폰 촬영)은 자동으로 가로로 회전하여 반환.
     """
     cap = cv.VideoCapture(video_path)
     if not cap.isOpened():
@@ -121,9 +145,16 @@ def extract_frames_from_video(video_path, n_extract):
     total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
     fps          = cap.get(cv.CAP_PROP_FPS)
     duration     = total_frames / fps if fps > 0 else 0
+    w            = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
+    h            = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+
+    # 세로 영상 감지 및 회전 방향 결정
+    rotation     = get_rotation_from_exif(video_path)
+    orient_text  = '세로 → 자동 회전 적용' if rotation is not None else '가로 → 회전 없음'
 
     print(f'  📹 {os.path.basename(video_path)}'
-          f' | {total_frames}프레임 | {duration:.1f}초 | {fps:.1f}fps')
+          f' | {total_frames}프레임 | {duration:.1f}초 | {fps:.1f}fps'
+          f' | {w}x{h} ({orient_text})')
 
     # 균등 간격 프레임 인덱스 계산
     if total_frames <= n_extract:
@@ -136,7 +167,7 @@ def extract_frames_from_video(video_path, n_extract):
         cap.set(cv.CAP_PROP_POS_FRAMES, idx)
         ret, frame = cap.read()
         if ret:
-            frames.append(frame)
+            frames.append(rotate_frame(frame, rotation))  # ← 회전 적용
 
     cap.release()
     return frames
