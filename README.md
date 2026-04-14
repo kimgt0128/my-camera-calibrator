@@ -120,29 +120,28 @@ python distortion_correction.py
 
 ## 7. 캘리브레이션 결과 (Calibration Results)
 
-<!-- camera_calibration.py 실행 후 터미널 출력값을 아래 표에 붙여넣으세요 -->
-
 | 파라미터 | 값 |
 |---------|-----|
-| **fx** |  |
-| **fy** |  |
-| **cx** |  |
-| **cy** |  |
-| **k1** |  |
-| **k2** |  |
-| **p1** |  |
-| **p2** |  |
-| **k3** |  |
-| **RMS Error** |  |
+| **fx** | 579.8358 |
+| **fy** | 580.0895 |
+| **cx** | 640.0014 |
+| **cy** | 353.2502 |
+| **k1** | 0.001415 |
+| **k2** | 0.016521 |
+| **p1** | -0.001870 |
+| **p2** | -0.001837 |
+| **k3** | -0.026584 |
+| **RMS Error** | 0.435027 px |
 
 ---
 
 ## 8. 왜곡 보정 결과 (Distortion Correction Demo)
 
-<!-- distortion_correction.py 실행 후 s키로 저장한 스크린샷을 첨부하세요 -->
+### 보정 전/후 비교 (Compare)
+![compare](screenshots/calib_013_compare.jpg)
 
 ### 보정 전 (Original)
-![original](screenshots/screenshot_001_original.jpg)
+![original](screenshots/calib_013_original.jpg)
 
 ### 보정 후 (Corrected)
-![corrected](screenshots/screenshot_001_corrected.jpg)
+![corrected](screenshots/calib_013_corrected.jpg)

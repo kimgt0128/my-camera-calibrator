@@ -57,14 +57,39 @@ def make_obj_pts():
 
 def detect_corners(gray):
     """체스보드 코너 검출 + 서브픽셀 정제. 실패 시 None 반환"""
-    found, corners = cv.findChessboardCorners(gray, BOARD_PATTERN)
-    if not found:
-        return None
-    corners = cv.cornerSubPix(
-        gray, corners, (11, 11), (-1, -1),
-        criteria=(cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    )
-    return corners
+    
+    # ── 멀티스케일 검출: 원본 → 1.5x → 2x 순으로 시도 ──────────
+    scales = [1.0, 1.5, 2.0]
+    
+    for scale in scales:
+        if scale == 1.0:
+            resized = gray
+        else:
+            h, w = gray.shape
+            resized = cv.resize(gray, (int(w*scale), int(h*scale)),
+                                interpolation=cv.INTER_LINEAR)
+        
+        found, corners = cv.findChessboardCorners(
+            resized, BOARD_PATTERN,
+            # ↓ 추가: 더 적극적으로 탐색하는 플래그
+            flags=cv.CALIB_CB_ADAPTIVE_THRESH +
+                  cv.CALIB_CB_NORMALIZE_IMAGE +
+                  cv.CALIB_CB_FAST_CHECK
+        )
+        
+        if found:
+            # 확대된 좌표를 원본 크기로 되돌리기
+            if scale != 1.0:
+                corners = corners / scale
+            
+            # 서브픽셀 정제는 원본 이미지 기준으로
+            corners = cv.cornerSubPix(
+                gray, corners, (11, 11), (-1, -1),
+                criteria=(cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+            )
+            return corners
+    
+    return None
 
 
 def run_calibration(obj_points, img_points, img_size):
@@ -174,9 +199,6 @@ def extract_frames_from_video(video_path, n_extract):
 
 
 def run_calibration_from_videos(video_files):
-    """
-    방법 A: videos/ 폴더의 동영상들에서 프레임 추출 후 캘리브레이션
-    """
     print(f'\n[방법 A] {len(video_files)}개 동영상에서 프레임 추출')
     os.makedirs(CALIB_IMG_DIR, exist_ok=True)
 
@@ -184,16 +206,13 @@ def run_calibration_from_videos(video_files):
     obj_points = []
     img_points = []
     img_size   = None
-
-    # 동영상당 추출할 프레임 수 균등 분배
-    n_per_video = max(TARGET_IMAGES // len(video_files), 5)
-
     saved_count = 0
 
     for v_idx, vpath in enumerate(video_files):
         print(f'\n  [{v_idx+1}/{len(video_files)}] 처리 중...')
-        frames = extract_frames_from_video(vpath, n_per_video * 3)
-        # 3배 더 추출 후 체스보드 검출된 것만 걸러냄
+        
+        # ↓ 변경: 전체 프레임 다 추출
+        frames = extract_frames_from_video(vpath, 9999)
 
         detected = 0
         for frame in frames:
@@ -207,23 +226,20 @@ def run_calibration_from_videos(video_files):
                 obj_points.append(obj_pts)
                 img_points.append(corners)
 
-                # calib_images/ 에 저장
                 saved_count += 1
                 fname = os.path.join(CALIB_IMG_DIR, f'calib_{saved_count:03d}.jpg')
                 cv.imwrite(fname, frame)
                 detected += 1
 
-                # 동영상당 목표 수 달성 시 중단
-                if detected >= n_per_video:
-                    break
+                # ↓ 변경: 동영상당 제한 없앰 (전부 수집)
 
-        print(f'     → 체스보드 검출 성공: {detected}장 / 추출 {len(frames)}프레임')
+        print(f'     → 체스보드 검출 성공: {detected}장 / 전체 {len(frames)}프레임')
 
-    print(f'\n  총 유효 이미지: {len(obj_points)}장 (calib_images/ 저장 완료)')
+    print(f'\n  총 유효 이미지: {len(obj_points)}장')
 
     if len(obj_points) < MIN_IMAGES:
         print(f'\n❌ 유효 이미지 부족: {len(obj_points)}장 (최소 {MIN_IMAGES}장 필요)')
-        print('   동영상에서 체스보드가 잘 보이도록 다시 촬영하세요.')
+        print('   체스보드가 선명하게 찍힌 부분이 부족합니다.')
         return
 
     run_calibration(obj_points, img_points, img_size)
